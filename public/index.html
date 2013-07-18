@@ -1,0 +1,47 @@
+<html>
+  <head>
+    <title>BTC Testbench</title>
+  </head>
+  <body>
+
+    <div id="balance">
+      <h3>Balance:</h3>
+      <ul>
+        <li>EUR:</li>
+        <li>BTC:</li>
+        <li>Valor BTC:</li>
+        <li>Valor Total:</li>
+      </ul>
+    </div>
+    <hr>
+    <div id="new_order">
+      <h3>New Order</h3>
+      <select id="type" name="order_type">
+      <option value="buy">BUY</option>
+      <option value="sell">SELL</option>
+      </select>
+      <p>Amount: <input id="amount" type="text" name="amount" /></p>
+      <p>At: <input id="price" type="text" name="price" /></p>
+      <input id="submitButton" type="submit" value="Issue new order" />
+    </div>
+    <hr>
+    <div id="active">
+      <h3>Active Orders:</h3>
+    </div>
+    <hr>
+    <div id="fired">
+      <h3>Fired Orders:</h3>
+    </div>
+    <script src="js/jquery-1.10.2.min.js"></script>
+    <script src="https://socketio.mtgox.com/socket.io/socket.io.js"></script>
+    <script>
+      var conn = io.connect('https://socketio.mtgox.com/mtgox?Currency=EUR');
+      conn.on('message', function(data) {
+        // if (data.channel_name == 'ticker.BTCEUR') {
+        //   $('#list').append('<li>' + new Date() + ': BUY -> ' + data.ticker.buy.display + ' | SELL -> ' + data.ticker.sell.display + '</li>');
+        // }
+
+      });
+    </script>
+  </body>
+</html>
