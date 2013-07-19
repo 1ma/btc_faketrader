@@ -7,7 +7,8 @@ var express = require('express')
   , http = require('http')
   , https = require('https')
   , path = require('path')
-  , io = require('socket.io-client');
+  , io = require('socket.io-client')
+  , orders = require('./routes/orders');
 
 var app = express();
 
@@ -18,6 +19,9 @@ app.use(express.compress());
 app.use(express.bodyParser());
 app.use(express.methodOverride());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Register routes
+app.post('/orders', orders.addOrder);
 
 // Get a socket listening to the MtGox API
 var socket = io.connect('https://socketio.mtgox.com/mtgox?Currency=EUR');

@@ -1,9 +1,14 @@
 <html>
   <head>
-    <title>BTC Testbench</title>
+    <title>BTC Faketrader</title>
   </head>
   <body>
-
+    <div id="live_market">
+      <h3>Live Market Prices:</h3>
+      <h4 id="buy_disp">BUY:</h4>
+      <h4 id="sell_disp">SELL:</h4>
+    </div>
+    <hr>
     <div id="balance">
       <h3>Balance:</h3>
       <ul>
@@ -33,26 +38,7 @@
       <h3>Fired Orders:</h3>
     </div>
     <script src="js/jquery-1.10.2.min.js"></script>
-    <script src="https://socketio.mtgox.com/socket.io/socket.io.js"></script>
-    <script>
-      var conn = io.connect('https://socketio.mtgox.com/mtgox?Currency=EUR');
-      conn.on('message', function(data) {
-        // if (data.channel_name == 'ticker.BTCEUR') {
-        //   $('#list').append('<li>' + new Date() + ': BUY -> ' + data.ticker.buy.display + ' | SELL -> ' + data.ticker.sell.display + '</li>');
-        // }
-      });
-
-      $('#submitOrderBtn').click(function() {
-        var type = $('#type').val();
-        var amount = $('#amount').val();
-        var price = $('#price').val();
-
-        console.log(type + ' ' + amount + ' ' + price);
-        $.post('/wishes', {"type": type, "amount": amount, "price": price}, function() {
-          // TODO Print new order in active div table
-          console.log('The order has been successfully recorded');
-        });
-      });
-    </script>
+    <script src="js/socket.io-0.9.16.min.js"></script>
+    <script src="js/index.js"></script>
   </body>
 </html>
