@@ -22,7 +22,7 @@
       </select>
       <p>Amount: <input id="amount" type="text" name="amount" /></p>
       <p>At: <input id="price" type="text" name="price" /></p>
-      <input id="submitButton" type="submit" value="Issue new order" />
+      <input id="submitOrderBtn" type="submit" value="Issue new order" />
     </div>
     <hr>
     <div id="active">
@@ -40,7 +40,18 @@
         // if (data.channel_name == 'ticker.BTCEUR') {
         //   $('#list').append('<li>' + new Date() + ': BUY -> ' + data.ticker.buy.display + ' | SELL -> ' + data.ticker.sell.display + '</li>');
         // }
+      });
 
+      $('#submitOrderBtn').click(function() {
+        var type = $('#type').val();
+        var amount = $('#amount').val();
+        var price = $('#price').val();
+
+        console.log(type + ' ' + amount + ' ' + price);
+        $.post('/wishes', {"type": type, "amount": amount, "price": price}, function() {
+          // TODO Print new order in active div table
+          console.log('The order has been successfully recorded');
+        });
       });
     </script>
   </body>
