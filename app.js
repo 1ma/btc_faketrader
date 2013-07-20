@@ -1,94 +1,114 @@
-var express = require('express')
-  , http = require('http')
-  , https = require('https')
-  , path = require('path')
-  , _ = require('underscore')
-  , io = require('socket.io-client')
-  , async = require('async')
-  , db = require('./routes/db')
-  , orders = require('./routes/orders');
+var async   = require('async');
 
-var app = express();
+var ctx = {};
+ctx.settings = require('./settings');
+async.series([setupDB, setupServer, setupMtGoxSocket, setupLogic, listen], ready);
 
-// all environments
-app.set('port', process.env.PORT || 80);
-app.use(express.favicon());
-app.use(express.compress());
-app.use(express.bodyParser());
-app.use(express.methodOverride());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Register Express routes
-app.post('/orders', orders.addOrder);
-app.get('/orders', orders.getAllOrders);
-
-// Establish DB connection
-db.init();
-
-// Get a socket listening to the MtGox API
-var socket = io.connect('https://socketio.mtgox.com/mtgox?Currency=EUR');
-
-var MTGOX_BTCEUR_CHANNELS = {
-  trade: 'dbf1dee9-4f2e-4a08-8cb7-748919a71b21',
-  depth: '057bdc6b-9f9c-44e4-bc1a-363e4443ce87',
-  ticker: '0bb6da8b-f6c6-4ecf-8f0d-a544ad948c15'
+function setupDB(callback) {
+  ctx.db = require('./db');
+  ctx.db.init(ctx, callback);
 }
 
-// unsubscribe from depth and trade messages
-socket.emit('message', {
-  op: 'unsubscribe',
-  channel: MTGOX_BTCEUR_CHANNELS.trade
-});
-socket.emit('message', {
-  op: 'unsubscribe',
-  channel: MTGOX_BTCEUR_CHANNELS.depth
-});
+function setupServer(callback) {
+  var express = require('express')
+    , path    = require('path')
+    , orders  = require('./routes/orders');
 
-function processActiveOrders() {
+  var app = express();
 
+  // Express settings
+  app.set('port', process.env.PORT || ctx.settings.http.port || 5000);
+  app.use(express.favicon());
+  app.use(express.compress());
+  app.use(express.bodyParser());
+  app.use(express.methodOverride());
+  app.use(express.static(path.join(__dirname, 'public')));
+
+  // Express routes
+  app.post('/orders', orders.addOrder);
+  app.get('/orders', orders.getAllOrders);
+
+  ctx.app = app;
+  console.log('setupServer: OK');
+  callback(null);
 }
 
-function runApplication() {
-  // TODO Read from MongoDB
-  var eur = 1000;
-  var btc = 2.00000;
-  var buy = 55;
-  var sell = 60;
-  var open_orders = [];
-  /*db.findAllOrders(function(err, allOrders) {
+function setupMtGoxSocket(callback) {
+  var io = require('socket.io-client');
+
+  var MTGOX_BTCEUR_CHANNELS = {
+    trade: 'dbf1dee9-4f2e-4a08-8cb7-748919a71b21',
+    depth: '057bdc6b-9f9c-44e4-bc1a-363e4443ce87',
+    ticker: '0bb6da8b-f6c6-4ecf-8f0d-a544ad948c15'
+  }
+
+  var mtgox_socket = io.connect('https://socketio.mtgox.com/mtgox?Currency=EUR');
+  mtgox_socket.emit('message', { op: 'unsubscribe', channel: MTGOX_BTCEUR_CHANNELS.trade });
+  mtgox_socket.emit('message', { op: 'unsubscribe', channel: MTGOX_BTCEUR_CHANNELS.depth });
+
+  ctx.mtgox_socket = mtgox_socket;
+  console.log('setupMtGoxSocket: OK');
+  callback(null);
+}
+
+function setupLogic(callback) {
+  var _ = require('underscore');
+
+  // TODO Guardar un valor recent de buy i sell a la BD i llegirlo en aquest punt
+  ctx.logic = {};
+  ctx.logic.buy = 0;
+  ctx.logic.sell = 1000000;
+  ctx.logic.open_orders = [];
+  ctx.db.findAllOrders(function(err, allOrders) {
     if (err)
-      throw err;
+      callback(err);
 
     open_orders = _.select(allOrders, function(elem){
       return elem.fired_date == null;
     });
+  });
 
-    console.log('Loaded all open orders in memory:');
-    console.log(open_orders);
-  });*/
+  ctx.mtgox_socket.on('message', function(data) {
+    if (data.channel_name == 'ticker.BTCEUR') {
+      var last_buy = data.ticker.buy.value;
+      var last_sell = data.ticker.sell.value;
 
-  socket.on('message', function(data) {
-      if (data.channel_name == 'ticker.BTCEUR') {
-        // Parse latest prices out of the incoming data object
-        var last_buy = data.ticker.buy.value;
-        var last_sell = data.ticker.sell.value;
+      console.log( new Date().getTime() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
 
-        console.log( new Date().getTime() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
-
-        // Update local buy and sell prices and check for fired active market orders
-        if (last_buy != buy || last_sell != sell) {
-          console.log('Updated local prices');
-          buy = last_buy;
-          sell = last_sell;
-          processActiveOrders();
-        }
+      if (last_buy != ctx.logic.buy || last_sell != ctx.logic.sell) {
+        console.log('Updated local prices');
+        ctx.logic.buy = last_buy;
+        ctx.logic.sell = last_sell;
+        processActiveOrders();
       }
-    });
+    }
+  });
+
+  console.log('setupLogic: OK');
+  callback(null);
+  function processActiveOrders() {
+    // TODO Comprovar per cada ordre de mercat si cal activarla
+
+    // Passos quan salta ordre de mercat:
+    // 1. Omplir el camp fired_date amb linstant actual en memoria
+    // 2. Si es una ordre BUY:  EUR -= order.price; BTC += order.amount;
+    //    Si es una ordre SELL: EUR += order.price; BTC += order.amount;
+    // 3. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
+    // 4. Actualitzar document a la BD
+  }
 }
 
-// Serve control webpage
-var server = http.createServer(app).listen(app.get('port'), function() {
-  console.log('Express server listening on port ' + app.get('port'));
-});
+function listen(callback) {
+  var http = require('http');
 
-runApplication();
+  http.createServer(ctx.app).listen(ctx.app.get('port'), function() {
+    console.log('listen: OK (port ' + ctx.app.get('port') + ')');
+    callback(null);
+  });
+}
+
+function ready(err) {
+  if (err)
+    throw err;
+  console.log('Ready to kick ass!');
+}

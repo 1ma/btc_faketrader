@@ -1,16 +1,19 @@
 var mongo = require('mongodb');
 var db;
 
-exports.init = function() {
-  mongo.Db.connect('mongodb://localhost:27017/btcft', {auto_reconnect: true}, function(err, handler) {
+exports.init = function(ctx, callback) {
+  var settings = ctx.settings;
+  mongo.Db.connect('mongodb://' + settings.db.host + ':' + settings.db.port + '/' + settings.db.name, {auto_reconnect: true}, function(err, handler) {
     if (err)
-      throw err;
+      callback(err);
     db = handler;
+    console.log('setupDB: OK');
+    callback(null);
   });
 };
 
 exports.insertOrder = function (type, amount, price, callback) {
-  var order = { type: type, amount: amount, price: price, issue_date: new Date(), fired_date: null};
+  var order = { type: type, amount: amount, price: price, issue_date: new Date(), fired_date: null };
   db.collection('orders', function(err, collection) {
     if (err)
       callback(err, null);
