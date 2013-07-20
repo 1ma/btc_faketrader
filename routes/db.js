@@ -5,37 +5,27 @@ exports.init = function() {
   mongo.Db.connect('mongodb://localhost:27017/btcft', {auto_reconnect: true}, function(err, handler) {
     if (err)
       throw err;
-
     db = handler;
   });
 };
 
-/*
-exports.insert = function (tag, price, callback) {
-  var wish = { tag: tag, price: price, date: new Date()};
-  db.collection('wishes', function(err, collection) {
+exports.insertOrder = function (type, amount, price, callback) {
+  var order = { type: type, amount: amount, price: price, issue_date: new Date(), fired_date: null};
+  db.collection('orders', function(err, collection) {
     if (err)
-      throw err;
-
-    collection.insert(wish, function(err, result) {
-      if (err)
-        throw err;
-
-      callback("OK");
+      callback(err, null);
+    collection.insert(order, function(err, result) {
+      callback(err, result);
     });
   });
 };
 
-exports.findAll = function(callback) {
-  db.collection('wishes', function(err, collection) {
+exports.findAllOrders = function(callback) {
+  db.collection('orders', function(err, collection) {
     if (err)
-      throw err;
-
+      callback(err, null);
     collection.find().toArray(function (err, items) {
-      if (err)
-        throw err;
-
-      callback(items);
+      callback(err, items);
     });
   });
-};*/
+};

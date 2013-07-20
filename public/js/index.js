@@ -4,18 +4,18 @@ var MTGOX_BTCEUR_CHANNELS = {
   ticker: '0bb6da8b-f6c6-4ecf-8f0d-a544ad948c15'
 }
 
-var conn = io.connect('https://socketio.mtgox.com/mtgox?Currency=EUR');
+var mtgox_socket = io.connect('https://socketio.mtgox.com/mtgox?Currency=EUR');
 
-conn.emit('message', {
+mtgox_socket.emit('message', {
   op: 'unsubscribe',
   channel: MTGOX_BTCEUR_CHANNELS.trade
 });
-conn.emit('message', {
+mtgox_socket.emit('message', {
   op: 'unsubscribe',
   channel: MTGOX_BTCEUR_CHANNELS.depth
 });
 
-conn.on('message', function(data) {
+mtgox_socket.on('message', function(data) {
   if (data.channel_name == 'ticker.BTCEUR') {
     $('#buy_disp').text('BUY: ' + data.ticker.buy.display);
     $('#sell_disp').text('SELL: ' + data.ticker.sell.display);
