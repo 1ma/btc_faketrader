@@ -40,10 +40,9 @@ $('#submitOrderBtn').click(function() {
     var type = $('#type').val();
     var amount = $('#amount').val();
     var price = $('#price').val();
-
-    console.log(type + ' ' + amount + ' ' + price);
-    $.post('/orders', {"type": type, "amount": amount, "price": price}, function() {
+    $.post('/orders', {"type": type, "amount": amount, "price": price}, function(result) {
       // TODO Print new order in active div table
       console.log('The order has been successfully recorded');
+      console.log(result);
     });
   });

@@ -13,17 +13,18 @@ function setupServer(callback) {
   var express = require('express')
     , path    = require('path')
     , orders  = require('./routes/orders')
-    , user   = require('./routes/user');
+    , user    = require('./routes/user');
 
   var app = express();
 
   // Express settings
-  app.set('port', process.env.PORT || ctx.settings.http.port || 5000);
+  app.set('port', ctx.settings.http.port);
   app.use(express.favicon());
   app.use(express.compress());
   app.use(express.bodyParser());
   app.use(express.methodOverride());
   app.use(express.static(path.join(__dirname, 'public')));
+  app.disable('x-powered-by');
 
   // Express routes
   app.post('/orders', orders.addOrder);
@@ -66,7 +67,7 @@ function setupLogic(callback) {
   ctx.logic.buy = 0;
   ctx.logic.sell = 1000000;
   ctx.logic.open_orders = [];
-  ctx.db.findAllOrders(function(err, allOrders) {
+  ctx.db.getAllOrders(function(err, allOrders) {
     if (err)
       callback(err);
 
@@ -83,7 +84,6 @@ function setupLogic(callback) {
       console.log( new Date().getTime() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
 
       if (last_buy != ctx.logic.buy || last_sell != ctx.logic.sell) {
-        console.log('Updated local prices');
         ctx.logic.buy = last_buy;
         ctx.logic.sell = last_sell;
         processActiveOrders();
@@ -92,6 +92,7 @@ function setupLogic(callback) {
   });
 
   console.log('setupLogic: OK');
+
   callback(null);
   function processActiveOrders() {
     // TODO Comprovar per cada ordre de mercat si cal activarla
@@ -117,5 +118,5 @@ function listen(callback) {
 function ready(err) {
   if (err)
     throw err;
-  console.log('Ready to kick ass!');
+  console.log('BTC Faketrader ready to kick ass!');
 }

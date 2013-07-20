@@ -17,22 +17,35 @@ exports.addOrder = function(req, res) {
   var amount = validateAmount(req.body.amount);
   var price = validatePrice(req.body.price);
   if (type !== null && amount !== null && price !== null) {
-    db.insertOrder(type, amount, price, function(err, order) {
-      if (err)
-        throw err;
-      console.log('Successfuly inserted new order into DB');
-      console.log(order);
-      res.send(order);
+    var order = { type: type, amount: amount, price: price, issue_date: new Date(), fired_date: null };
+    db.handler.collection('orders', function(err, collection) {
+      if (err) {
+        res.send(500);
+      } else {
+        collection.insert(order, function(err, result) {
+          if (err)
+            res.send(500);
+          else
+            res.send(200, result);
+        });
+      }
     });
   } else {
-    console.log('Invalid request for orders.addOrder');
+    res.send(400);
   }
 }
 
 exports.getAllOrders = function(req, res) {
-  db.findAllOrders(function(err, allOrders) {
-    if (err)
-      throw err;
-    res.send(allOrders);
+  db.handler.collection('orders', function(err, collection) {
+    if (err) {
+      res.send(500);
+    } else {
+      collection.find().toArray(function (err, items) {
+        if (err)
+          res.send(500);
+        else
+          res.send(200, items);
+      });
+    }
   });
 }
