@@ -12,10 +12,10 @@
     <div id="balance">
       <h3>Balance:</h3>
       <ul>
-        <li>EUR:</li>
-        <li>BTC:</li>
-        <li>Valor BTC:</li>
-        <li>Valor Total:</li>
+        <li id="eur">EUR:</li>
+        <li id="btc">BTC:</li>
+        <li id="btc_val">BTC Value:</li>
+        <li id="comb_val">Combined Value:</li>
       </ul>
     </div>
     <hr>
@@ -32,10 +32,27 @@
     <hr>
     <div id="active">
       <h3>Active Orders:</h3>
+      <table id="active_list" border="1">
+        <tr>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>Price</th>
+          <th>Date Issued</th>
+        </tr>
+      </table>
     </div>
     <hr>
     <div id="fired">
       <h3>Fired Orders:</h3>
+      <table id="active_list" border="1">
+        <tr>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>Price</th>
+          <th>Date Issued</th>
+          <th>Date Fired</th>
+        </tr>
+      </table>
     </div>
     <script src="js/jquery-1.10.2.min.js"></script>
     <script src="js/socket.io-0.9.16.min.js"></script>
