@@ -6,7 +6,7 @@ exports.init = function(ctx, callback) {
   mongo.Db.connect('mongodb://' + settings.db.host + ':' + settings.db.port + '/' + settings.db.name, {auto_reconnect: true}, function(err, handler) {
     if (err)
       callback(err);
-    db = handler;
+    exports.db = db = handler;
     console.log('setupDB: OK');
     callback(null);
   });

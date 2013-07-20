@@ -12,7 +12,8 @@ function setupDB(callback) {
 function setupServer(callback) {
   var express = require('express')
     , path    = require('path')
-    , orders  = require('./routes/orders');
+    , orders  = require('./routes/orders')
+    , user   = require('./routes/user');
 
   var app = express();
 
@@ -27,6 +28,7 @@ function setupServer(callback) {
   // Express routes
   app.post('/orders', orders.addOrder);
   app.get('/orders', orders.getAllOrders);
+  app.get('/user', user.getBalance);
 
   ctx.app = app;
   console.log('setupServer: OK');
@@ -54,8 +56,13 @@ function setupMtGoxSocket(callback) {
 function setupLogic(callback) {
   var _ = require('underscore');
 
-  // TODO Guardar un valor recent de buy i sell a la BD i llegirlo en aquest punt
+
   ctx.logic = {};
+  // TODO Llegir EUR i BTC de la BD, fent servir nomes el valor de settings quan a la DB no hi es
+  ctx.logic.eur = ctx.settings.eur;
+  ctx.logic.btc = ctx.settings.btc;
+
+  // TODO Guardar un valor recent de buy i sell a la BD i llegirlo en aquest punt
   ctx.logic.buy = 0;
   ctx.logic.sell = 1000000;
   ctx.logic.open_orders = [];
