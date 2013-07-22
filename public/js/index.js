@@ -4,7 +4,8 @@ var eur
   , sell
   , active_orders
   , fired_orders
-  , mtgox_socket;
+  , mtgox_socket
+  , btcft_socket;
 
 $(document).ready(function() {
   setupMtGoxSocket();
@@ -12,17 +13,15 @@ $(document).ready(function() {
   $.get('/user', function(data) {
     eur = data.eur;
     btc = data.btc;
-    $('#eur').text('EUR: ' + eur + ' €');
-    $('#btc').text('BTC: ' + btc);
+    reprintBalance();
   });
 
   $.get('/orders', function(allOrders) {
     active_orders = _.select(allOrders, function(elem) {
       return elem.fired_date === null;
     });
-    console.log(active_orders);
     _.each(active_orders, function(elem) {
-      $('#active_list').append('<tr><td>'+ elem.type.toUpperCase() + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
+      $('#active_list').append('<tr><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
     });
     fired_orders = _.difference(allOrders, active_orders);
   });
@@ -32,11 +31,19 @@ $('#submitOrderBtn').click(function() {
   var type = $('#type').val();
   var amount = $('#amount').val();
   var price = $('#price').val();
-  $.post('/orders', {"type": type, "amount": amount, "price": price}, function(result) {
-    // TODO Print new order in active div table
-    console.log('The order has been successfully recorded');
-    active_orders.push(result);
-    $('#active_list').append('<tr><td>'+ result.type.toUpperCase() + '</td><td>'+ result.amount +'</td><td>' + result.price +'</td><td>'+ result.issue_date +'</td></tr>');
+  $.post('/orders', {"type": type, "amount": amount, "price": price}, function(data) {
+    active_orders.push(data);
+    $('#active_list').append('<tr><td>'+ data.type + '</td><td>'+ data.amount +'</td><td>' + data.price +'</td><td>'+ data.issue_date +'</td></tr>');
+  });
+});
+
+$('#submitBalanceBtn').click(function() {
+  var newEur = $('#edit_eur').val();
+  var newBtc = $('#edit_btc').val();
+  $.post('/user', {"eur": newEur, "btc": newBtc}, function(result) {
+    eur = newEur;
+    btc = newBtc;
+    reprintBalance();
   });
 });
 
@@ -57,8 +64,37 @@ function setupMtGoxSocket() {
         $('#buy_disp').text('BUY: ' + data.ticker.buy.display);
         $('#sell_disp').text('SELL: ' + data.ticker.sell.display);
         $('#btc_val').text('BTC Value: ' + data.ticker.buy.value * btc + ' €');
-        $('#comb_val').text('Combined Value: ' + (data.ticker.buy.value * btc + eur) + ' €');
+        $('#comb_val').text('Combined Value: ' + ((data.ticker.buy.value * btc) + eur) + ' €');
       }
     }
+  });
+}
+
+function reprintBalance() {
+  $('#eur').text('EUR: ' + eur + ' €');
+  $('#btc').text('BTC: ' + btc);
+  $('#edit_eur').val(eur);
+  $('#edit_btc').val(btc);
+}
+
+function reprintList(array, list) {
+  $('#'+list).empty();
+  _.each(array, function(elem) {
+    $('#'+list).append('<tr><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
+  });
+}
+
+function setupBtcftSocket() {
+  btcft_socket = io.connect();
+  btcft_socket.on('fired_order', function(data) {
+    eur = data.eur;
+    btc = data.btc;
+    fired_orders.push(data.order);
+    var i = _.indexOf(active_orders, data.order);
+    delete active_order[i];
+    active_orders = _.compact(active_orders);
+    reprintList(active_orders, "active_list");
+    reprintList(fired_orders, "fired_list");
+    reprintBalance();
   });
 }

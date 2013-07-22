@@ -1,4 +1,5 @@
-var async   = require('async');
+var async = require('async')
+  , _     = require('underscore');
 
 var ctx = {};
 ctx.settings = require('./settings');
@@ -27,9 +28,11 @@ function setupServer(callback) {
   app.disable('x-powered-by');
 
   // Express routes
-  app.post('/orders', orders.addOrder);
   app.get('/orders', orders.getAllOrders);
+  app.post('/orders', orders.addOrder);
   app.get('/user', user.getBalance);
+  app.post('/user', user.setBalance);
+
 
   ctx.app = app;
   console.log('setupServer: OK');
@@ -54,26 +57,46 @@ function setupMtGoxSocket(callback) {
   callback(null);
 }
 
+function setupLocalSocket(callback) {
+  var io = require('socket.io');
+
+  io.
+  console.log('setupLocalSocket: OK');
+  callback(null);
+}
+
 function setupLogic(callback) {
-  var _ = require('underscore');
-
-
   ctx.logic = {};
-  // TODO Llegir EUR i BTC de la BD, fent servir nomes el valor de settings quan a la DB no hi es
-  ctx.logic.eur = ctx.settings.eur;
-  ctx.logic.btc = ctx.settings.btc;
+  ctx.logic.buy = null;
+  ctx.logic.sell = null;
 
-  // TODO Guardar un valor recent de buy i sell a la BD i llegirlo en aquest punt
-  ctx.logic.buy = 0;
-  ctx.logic.sell = 1000000;
-  ctx.logic.open_orders = [];
-  ctx.db.getAllOrders(function(err, allOrders) {
-    if (err)
+  ctx.db.findAll('orders', function(err, allOrders) {
+    if (err) {
       callback(err);
-
-    open_orders = _.select(allOrders, function(elem){
-      return elem.fired_date == null;
-    });
+    } else {
+      ctx.logic.open_orders = _.select(allOrders, function(elem) {
+        return elem.fired_date === null;
+      });
+      ctx.db.findAll('user', function(err, result) {
+        if (err)
+            callback(err);
+        if (result.length === 0) {
+          ctx.db.insert('user', { eur: ctx.logic.eur, btc: ctx.logic.eur }, function(err, result) {
+            if (err === null) {
+              ctx.logic.eur = ctx.settings.logic.eur;
+              ctx.logic.btc = ctx.settings.logic.btc;
+              console.log('setupLogic: OK');
+            }
+            callback(err);
+          });
+        } else {
+          ctx.logic.eur = result[0].eur;
+          ctx.logic.btc = result[0].btc;
+          console.log('setupLogic: OK');
+          callback(null);
+        }
+      });
+    }
   });
 
   ctx.mtgox_socket.on('message', function(data) {
@@ -81,7 +104,7 @@ function setupLogic(callback) {
       var last_buy = data.ticker.buy.value;
       var last_sell = data.ticker.sell.value;
 
-      console.log( new Date().getTime() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
+      console.log( new Date() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
 
       if (last_buy != ctx.logic.buy || last_sell != ctx.logic.sell) {
         ctx.logic.buy = last_buy;
@@ -91,25 +114,47 @@ function setupLogic(callback) {
     }
   });
 
-  console.log('setupLogic: OK');
-
-  callback(null);
   function processActiveOrders() {
-    // TODO Comprovar per cada ordre de mercat si cal activarla
-
     // Passos quan salta ordre de mercat:
     // 1. Omplir el camp fired_date amb linstant actual en memoria
     // 2. Si es una ordre BUY:  EUR -= order.price; BTC += order.amount;
     //    Si es una ordre SELL: EUR += order.price; BTC += order.amount;
     // 3. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
     // 4. Actualitzar document a la BD
+    for (var i = 0; i < ctx.logic.open_orders.length; ++i) {
+      if (ctx.logic.open_orders[i].type === 'BUY' && ctx.logic.sell <= ctx.logic.open_orders[i].price) {
+        if (ctx.logic.eur > ctx.logic.buy*ctx.logic.open_orders[i].amount) {
+          ctx.logic.open_orders[i].fired_date = new Date();
+          ctx.logic.btc += ctx.logic.open_orders[i].amount;
+          ctx.logic.eur -= ctx.logic.buy*ctx.logic.open_orders[i].amount;
+          ctx.io.sockets.emit('fired_order', {eur: ctx.logic.eur, btc: ctx.logic.btc, order: ctx.logic.open_orders[i]});
+        } else {
+          console.log("WARNING: Not enough dough to execute BUY order " + ctx.logic.open_orders[i]._id);
+        }
+      }
+      if (ctx.logic.open_orders[i].type === 'SELL' && ctx.logic.buy >= ctx.logic.open_orders[i].price) {
+        if (ctx.logic.btc > ctx.logic.open_orders[i].amount) {
+          ctx.logic.open_orders[i].fired_date = new Date();
+          ctx.logic.btc -= ctx.logic.open_orders[i].amount;
+          ctx.logic.eur += ctx.logic.sell*ctx.logic.open_orders[i].amount;
+          ctx.io.sockets.emit('fired_order', {eur: ctx.logic.eur, btc: ctx.logic.btc, order: ctx.logic.open_orders[i]});
+        } else {
+          console.log("WARNING: Not enough BTCs to execute SELL order " + ctx.logic.open_orders[i]._id);
+        }
+      }
+    }
   }
 }
 
 function listen(callback) {
-  var http = require('http');
+  var http = require('http')
+    , io   = require('socket.io');
 
-  http.createServer(ctx.app).listen(ctx.app.get('port'), function() {
+  var server = http.createServer(ctx.app);
+  var io = io.listen(server);
+  io.set('log level', 1);
+  ctx.io = io;
+  server.listen(ctx.app.get('port'), function() {
     console.log('listen: OK (port ' + ctx.app.get('port') + ')');
     callback(null);
   });

@@ -1,7 +1,8 @@
-var db = require('../db');
+var db = require('../db')
+  , collection = 'users';
 
 function validateType(input) {
-  return (input === 'buy' || input === 'sell')? input : null;
+  return (input === 'BUY' || input === 'SELL')? input : null;
 }
 
 function validateAmount(input) {
@@ -12,40 +13,32 @@ function validatePrice(input) {
   return (!isNaN(input))? input : null;
 }
 
-exports.addOrder = function(req, res) {
-  var type = validateType(req.body.type);
-  var amount = validateAmount(req.body.amount);
-  var price = validatePrice(req.body.price);
-  if (type !== null && amount !== null && price !== null) {
-    var order = { type: type, amount: amount, price: price, issue_date: new Date(), fired_date: null };
-    db.handler.collection('orders', function(err, collection) {
-      if (err) {
-        res.send(500);
-      } else {
-        collection.insert(order, function(err, result) {
-          if (err)
-            res.send(500);
-          else
-            res.send(200, result[0]);
-        });
-      }
-    });
-  } else {
-    res.send(400);
-  }
+exports.getAllOrders = function(req, res) {
+  db.findAll(collection, function(err, allOrders) {
+    console.log('/orders findAll:');
+    console.log(allOrders);
+    if (err)
+      res.send(500, 'DB Error!');
+    else
+      res.send(200, allOrders);
+  });
 }
 
-exports.getAllOrders = function(req, res) {
-  db.handler.collection('orders', function(err, collection) {
-    if (err) {
-      res.send(500);
-    } else {
-      collection.find().toArray(function (err, items) {
-        if (err)
-          res.send(500);
-        else
-          res.send(200, items);
-      });
-    }
-  });
+exports.addOrder = function(req, res) {
+  var type   = validateType(req.body.type);
+  var amount = validateAmount(req.body.amount);
+  var price  = validatePrice(req.body.price);
+  if (type !== null && amount !== null && price !== null) {
+    var order = { type: type, amount: amount, price: price, issue_date: new Date(), fired_date: null };
+    db.insert(collection, order, function(err, result) {
+      console.log('/orders insert:');
+      console.log(result);
+      if (err)
+        res.send(500, 'Internal server error');
+      else
+        res.send(200, result[0]);   // TODO Canviar a result[0]._id
+    });
+  } else {
+    res.send(400, 'Invalid request');
+  }
 }

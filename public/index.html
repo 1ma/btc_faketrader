@@ -17,13 +17,16 @@
         <li id="btc_val">BTC Value:</li>
         <li id="comb_val">Combined Value:</li>
       </ul>
+      <p>Edit EUR: <input id="edit_eur" type="text" name="edit_eur" /> €</p>
+      <p>Edit BTC: <input id="edit_btc" type="text" name="edit_eur" /> BTC</p>
+      <input id="submitBalanceBtn" type="submit" value="Change Balance" />
     </div>
     <hr>
     <div id="new_order">
       <h3>New Order</h3>
       <select id="type" name="order_type">
-      <option value="buy">BUY</option>
-      <option value="sell">SELL</option>
+      <option value="BUY">BUY</option>
+      <option value="SELL">SELL</option>
       </select>
       <p>Amount: <input id="amount" type="text" name="amount" /> BTC</p>
       <p>At: <input id="price" type="text" name="price" /> €</p>
@@ -44,7 +47,7 @@
     <hr>
     <div id="fired">
       <h3>Fired Orders:</h3>
-      <table id="active_list" border="1">
+      <table id="fired_list" border="1">
         <tr>
           <th>Type</th>
           <th>Amount</th>

@@ -1,5 +1,5 @@
-var mongo = require('mongodb');
-var db;
+var mongo = require('mongodb')
+  , db;
 
 exports.init = function(ctx, callback) {
   var settings = ctx.settings;
@@ -16,8 +16,58 @@ exports.getAllOrders = function(callback) {
   db.collection('orders', function(err, collection) {
     if (err)
       callback(err, null);
-    collection.find().toArray(function (err, items) {
+    collection.find().toArray(function(err, items) {
       callback(err, items);
+    });
+  });
+};
+
+exports.findAll = function(collection, callback) {
+  db.collection(collection, function(err, collectionHandler) {
+    if (err)
+      callback(err, null);
+    collectionHandler.find().toArray(function(err, items) {
+      callback(err, items);
+    });
+  });
+};
+
+exports.findById = function(collection, id, callback) {
+  db.collection(collection, function(err, collectionHandler) {
+    if (err)
+      callback(err, null);
+    collectionHandler.find({ '_id': id }, function(err, document) {
+      callback(err, document);
+    });
+  });
+};
+
+exports.insert = function(collection, document, callback) {
+  db.collection(collection, function(err, collectionHandler) {
+    if (err)
+      callback(err, null);
+    collectionHandler.insert(document, { safe: true }, function(err, result) {
+      callback(err, result);
+    });
+  });
+};
+
+exports.update = function(collection, document, callback) {
+  db.collection(collection, function(err, collectionHandler) {
+    if (err)
+      callback(err, null);
+    collectionHandler.update({ '_id': document._id }, document, { safe: true }, function(err, result) {
+      callback(err, result);
+    });
+  });
+};
+
+exports.deleteById = function(collection, id, callback) {
+  db.collection(collection, function(err, collectionHandler) {
+    if (err)
+      callback(err, null);
+    collectionHandler.remove({ '_id': id }, { safe: true }, function(err, result) {
+      callback(err, result);
     });
   });
 };
