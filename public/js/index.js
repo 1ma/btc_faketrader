@@ -61,10 +61,11 @@ function setupMtGoxSocket() {
   mtgox_socket.on('message', function(data) {
     if (data.channel_name === 'ticker.BTCEUR') {
       if (buy === null || buy !== data.ticker.buy.value || sell === null || sell !== data.ticker.sell.value) {
+        var comb_value = data.ticker.buy.value*btc + new Number(eur);
         $('#buy_disp').text('BUY: ' + data.ticker.buy.display);
         $('#sell_disp').text('SELL: ' + data.ticker.sell.display);
         $('#btc_val').text('BTC Value: ' + data.ticker.buy.value * btc + ' €');
-        $('#comb_val').text('Combined Value: ' + ((data.ticker.buy.value * btc) + eur) + ' €');
+        $('#comb_val').text('Combined Value: ' + comb_value + ' €');
       }
     }
   });

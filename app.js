@@ -74,7 +74,7 @@ function setupLogic(callback) {
     if (err) {
       callback(err);
     } else {
-      ctx.logic.open_orders = _.select(allOrders, function(elem) {
+      ctx.logic.active_orders = _.select(allOrders, function(elem) {
         return elem.fired_date === null;
       });
       ctx.db.findAll('user', function(err, result) {
@@ -104,12 +104,27 @@ function setupLogic(callback) {
       var last_buy = data.ticker.buy.value;
       var last_sell = data.ticker.sell.value;
 
-      console.log( new Date() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
+      // console.log( new Date() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
 
-      if (last_buy != ctx.logic.buy || last_sell != ctx.logic.sell) {
+      if (true /*last_buy != ctx.logic.buy || last_sell != ctx.logic.sell*/) {
         ctx.logic.buy = last_buy;
         ctx.logic.sell = last_sell;
-        processActiveOrders();
+        ctx.db.findAll('orders', function(err, allOrders) {
+          if (err) {
+            throw err;
+          } else {
+            ctx.logic.active_orders = _.select(allOrders, function(elem) {
+              return elem.fired_date === null;
+            });
+            ctx.db.findAll('user', function(err, userData) {
+              if (err)
+                throw err;
+              ctx.logic.eur = userData[0].eur;
+              ctx.logic.btc = userData[0].btc;
+              processActiveOrders();
+            });
+          }
+        });
       }
     }
   });
@@ -121,28 +136,28 @@ function setupLogic(callback) {
     //    Si es una ordre SELL: EUR += order.price; BTC += order.amount;
     // 3. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
     // 4. Actualitzar document a la BD
-    for (var i = 0; i < ctx.logic.open_orders.length; ++i) {
-      if (ctx.logic.open_orders[i].type === 'BUY' && ctx.logic.sell <= ctx.logic.open_orders[i].price) {
-        if (ctx.logic.eur > ctx.logic.buy*ctx.logic.open_orders[i].amount) {
-          ctx.logic.open_orders[i].fired_date = new Date();
-          ctx.logic.btc += ctx.logic.open_orders[i].amount;
-          ctx.logic.eur -= ctx.logic.buy*ctx.logic.open_orders[i].amount;
-          ctx.io.sockets.emit('fired_order', {eur: ctx.logic.eur, btc: ctx.logic.btc, order: ctx.logic.open_orders[i]});
-        } else {
-          console.log("WARNING: Not enough dough to execute BUY order " + ctx.logic.open_orders[i]._id);
+    console.log('ProcessActiveOrders()');
+    console.log('BUY: ' + ctx.logic.buy);
+    console.log('SELL: ' + ctx.logic.sell);
+    console.log('EUR: ' + ctx.logic.eur);
+    console.log('BTC: ' + ctx.logic.btc);
+    for (var i = 0; i < ctx.logic.active_orders.length; ++i) {
+      var o = ctx.logic.active_orders[i];
+      console.log('Ordre ' + i + ': ' + JSON.stringify(o));
+      if (o.type === 'BUY' && o.price >= ctx.logic.sell) {
+        console.log(' Es compleix la condicio');
+        if (o.price*o.amount <= ctx.logic.eur) {
+          console.log('   Es pot executar');
         }
       }
-      if (ctx.logic.open_orders[i].type === 'SELL' && ctx.logic.buy >= ctx.logic.open_orders[i].price) {
-        if (ctx.logic.btc > ctx.logic.open_orders[i].amount) {
-          ctx.logic.open_orders[i].fired_date = new Date();
-          ctx.logic.btc -= ctx.logic.open_orders[i].amount;
-          ctx.logic.eur += ctx.logic.sell*ctx.logic.open_orders[i].amount;
-          ctx.io.sockets.emit('fired_order', {eur: ctx.logic.eur, btc: ctx.logic.btc, order: ctx.logic.open_orders[i]});
-        } else {
-          console.log("WARNING: Not enough BTCs to execute SELL order " + ctx.logic.open_orders[i]._id);
+      if (o.type === 'SELL' && o.price <= ctx.logic.buy) {
+        console.log(' Es compleix la condicio');
+        if (o.amount <= ctx.logic.btc) {
+          console.log('   Es pot executar');
         }
       }
     }
+
   }
 }
 

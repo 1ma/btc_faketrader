@@ -1,5 +1,5 @@
 var db = require('../db')
-  , collection = 'users';
+  , collection = 'orders';
 
 function validateType(input) {
   return (input === 'BUY' || input === 'SELL')? input : null;
