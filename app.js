@@ -122,7 +122,7 @@ function setupLogic(callback) {
               var dbEur = parseFloat(userData[0].eur);
               var dbBtc = parseFloat(userData[0].btc);
               ctx.logic.eur = (dbEur != ctx.logic.eur)? dbEur : ctx.logic.eur;
-              ctx.logic.btc = (dbBtc != ctx.logic.btc)? dbEur : ctx.logic.btc;
+              ctx.logic.btc = (dbBtc != ctx.logic.btc)? dbBtc : ctx.logic.btc;
               processActiveOrders();
             });
           }
@@ -212,6 +212,9 @@ function listen(callback) {
   var io = io.listen(server);
   io.set('log level', 1);
   ctx.io = io;
+  ctx.io.sockets.on('connection', function(socket) {
+    console.log('Connected new client: ' + socket.id);
+  });
   server.listen(ctx.app.get('port'), function() {
     console.log('listen: OK (port ' + ctx.app.get('port') + ')');
     callback(null);

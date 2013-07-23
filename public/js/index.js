@@ -9,6 +9,7 @@ var eur
 
 $(document).ready(function() {
   setupMtGoxSocket();
+  setupBtcftSocket();
 
   $.get('/user', function(data) {
     eur = data.eur;
@@ -21,11 +22,11 @@ $(document).ready(function() {
       return elem.fired_date === null;
     });
     _.each(active_orders, function(elem) {
-      $('#active_list').append('<tr><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
+      $('#active_list').append('<tr id="'+ elem._id +'"><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
     });
     fired_orders = _.difference(allOrders, active_orders);
     _.each(fired_orders, function(elem) {
-      $('#fired_list').append('<tr><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td><td>' + elem.fired_date +'</td></tr>');
+      $('#fired_list').append('<tr id="'+ elem._id +'"><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td><td>' + elem.fired_date +'</td></tr>');
     });
   });
 });
@@ -36,7 +37,7 @@ $('#submitOrderBtn').click(function() {
   var price = $('#price').val();
   $.post('/orders', {"type": type, "amount": amount, "price": price}, function(data) {
     active_orders.push(data);
-    $('#active_list').append('<tr><td>'+ data.type + '</td><td>'+ data.amount +'</td><td>' + data.price +'</td><td>'+ data.issue_date +'</td></tr>');
+    $('#active_list').append('<tr id="'+ data._id +'"><td>'+ data.type + '</td><td>'+ data.amount +'</td><td>' + data.price +'</td><td>'+ data.issue_date +'</td></tr>');
   });
 });
 
@@ -89,15 +90,22 @@ function reprintList(array, list) {
 }
 
 function setupBtcftSocket() {
-  btcft_socket = io.connect();
+  btcft_socket = io.connect('http://localhost');
   btcft_socket.on('fired_order', function(data) {
-  eur = data.balance.eur;
-  btc = data.balance.btc;
+  eur = parseFloat(data.balance.eur);
+  btc = parseFloat(data.balance.btc);
+
+  var done = false;
+  for (var i = 0; i < active_orders.length && !done; ++i) {
+    if (data.order._id === active_orders[i]._id) {
+      $('#'+active_orders[i]._id).remove();
+      delete active_orders[i];
+      active_orders = _.compact(active_orders);
+      done = true;
+    }
+  }
   fired_orders.push(data.order);
-  delete active_order[_.indexOf(active_orders, data.order)];
-  active_orders = _.compact(active_orders);
-  reprintList(active_orders, "active_list");
-  reprintList(fired_orders, "fired_list");
+  $('#fired_list').append('<tr id="'+ data.order._id +'"><td>'+ data.order.type + '</td><td>'+ data.order.amount +'</td><td>' + data.order.price +'</td><td>'+ data.order.issue_date +'</td><td>' + data.order.fired_date +'</td></tr>');
   reprintBalance();
   });
 }
