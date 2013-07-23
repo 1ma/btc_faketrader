@@ -24,6 +24,9 @@ $(document).ready(function() {
       $('#active_list').append('<tr><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
     });
     fired_orders = _.difference(allOrders, active_orders);
+    _.each(fired_orders, function(elem) {
+      $('#fired_list').append('<tr><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td><td>' + elem.fired_date +'</td></tr>');
+    });
   });
 });
 
@@ -88,14 +91,13 @@ function reprintList(array, list) {
 function setupBtcftSocket() {
   btcft_socket = io.connect();
   btcft_socket.on('fired_order', function(data) {
-    eur = data.eur;
-    btc = data.btc;
-    fired_orders.push(data.order);
-    var i = _.indexOf(active_orders, data.order);
-    delete active_order[i];
-    active_orders = _.compact(active_orders);
-    reprintList(active_orders, "active_list");
-    reprintList(fired_orders, "fired_list");
-    reprintBalance();
+  eur = data.balance.eur;
+  btc = data.balance.btc;
+  fired_orders.push(data.order);
+  delete active_order[_.indexOf(active_orders, data.order)];
+  active_orders = _.compact(active_orders);
+  reprintList(active_orders, "active_list");
+  reprintList(fired_orders, "fired_list");
+  reprintBalance();
   });
 }

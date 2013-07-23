@@ -83,15 +83,15 @@ function setupLogic(callback) {
         if (result.length === 0) {
           ctx.db.insert('user', { eur: ctx.logic.eur, btc: ctx.logic.eur }, function(err, result) {
             if (err === null) {
-              ctx.logic.eur = ctx.settings.logic.eur;
-              ctx.logic.btc = ctx.settings.logic.btc;
+              ctx.logic.eur = parseFloat(ctx.settings.logic.eur);
+              ctx.logic.btc = parseFloat(ctx.settings.logic.btc);
               console.log('setupLogic: OK');
             }
             callback(err);
           });
         } else {
-          ctx.logic.eur = result[0].eur;
-          ctx.logic.btc = result[0].btc;
+          ctx.logic.eur = parseFloat(result[0].eur);
+          ctx.logic.btc = parseFloat(result[0].btc);
           console.log('setupLogic: OK');
           callback(null);
         }
@@ -101,10 +101,10 @@ function setupLogic(callback) {
 
   ctx.mtgox_socket.on('message', function(data) {
     if (data.channel_name == 'ticker.BTCEUR') {
-      var last_buy = data.ticker.buy.value;
-      var last_sell = data.ticker.sell.value;
+      var last_buy = parseFloat(data.ticker.buy.value);
+      var last_sell = parseFloat(data.ticker.sell.value);
 
-      // console.log( new Date() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
+      console.log( new Date() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
 
       if (true /*last_buy != ctx.logic.buy || last_sell != ctx.logic.sell*/) {
         ctx.logic.buy = last_buy;
@@ -119,8 +119,10 @@ function setupLogic(callback) {
             ctx.db.findAll('user', function(err, userData) {
               if (err)
                 throw err;
-              ctx.logic.eur = userData[0].eur;
-              ctx.logic.btc = userData[0].btc;
+              var dbEur = parseFloat(userData[0].eur);
+              var dbBtc = parseFloat(userData[0].btc);
+              ctx.logic.eur = (dbEur != ctx.logic.eur)? dbEur : ctx.logic.eur;
+              ctx.logic.btc = (dbBtc != ctx.logic.btc)? dbEur : ctx.logic.btc;
               processActiveOrders();
             });
           }
@@ -132,32 +134,73 @@ function setupLogic(callback) {
   function processActiveOrders() {
     // Passos quan salta ordre de mercat:
     // 1. Omplir el camp fired_date amb linstant actual en memoria
-    // 2. Si es una ordre BUY:  EUR -= order.price; BTC += order.amount;
-    //    Si es una ordre SELL: EUR += order.price; BTC += order.amount;
-    // 3. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
-    // 4. Actualitzar document a la BD
+    // 2. Si es una ordre BUY:  EUR -= ctx.logic.sell*order.amount; BTC += order.amount;
+    //    Si es una ordre SELL: EUR += ctx.logic.buy*order.amount; BTC -= order.amount;
+    // 3. Actualitzar document a la BD
+    // 4. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
     console.log('ProcessActiveOrders()');
     console.log('BUY: ' + ctx.logic.buy);
     console.log('SELL: ' + ctx.logic.sell);
     console.log('EUR: ' + ctx.logic.eur);
     console.log('BTC: ' + ctx.logic.btc);
+    var updated = false;
     for (var i = 0; i < ctx.logic.active_orders.length; ++i) {
       var o = ctx.logic.active_orders[i];
+      o.amount = parseFloat(o.amount);
+      o.price = parseFloat(o.price);
       console.log('Ordre ' + i + ': ' + JSON.stringify(o));
       if (o.type === 'BUY' && o.price >= ctx.logic.sell) {
         console.log(' Es compleix la condicio');
-        if (o.price*o.amount <= ctx.logic.eur) {
+        if (ctx.logic.sell*o.amount <= ctx.logic.eur) {
           console.log('   Es pot executar');
+          updated = true;
+          // 1. Omplir el camp fired_date amb linstant actual en memoria
+          o.fired_date = new Date();
+          // 2. Si es una ordre BUY:  EUR -= ctx.logic.sell*order.amount; BTC += order.amount;
+          ctx.logic.eur -= ctx.logic.sell*o.amount;
+          ctx.logic.btc += o.amount;
+          console.log('post actualitzacio: ' + ctx.logic.eur + ' ' + ctx.logic.btc);
+          // 3. Actualitzar document a la BD
+          ctx.db.update('orders', o, function(err, result) {
+            if (err || result != 1)
+              throw err;
+            // 4. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
+            ctx.io.sockets.emit('fired_order', { order: o, balance: { eur: ctx.logic.eur, btc: ctx.logic.btc } });
+          });
         }
       }
       if (o.type === 'SELL' && o.price <= ctx.logic.buy) {
         console.log(' Es compleix la condicio');
         if (o.amount <= ctx.logic.btc) {
           console.log('   Es pot executar');
+          updated = true;
+          // 1. Omplir el camp fired_date amb linstant actual en memoria
+          o.fired_date = new Date();
+          // 2. Si es una ordre SELL: EUR += ctx.logic.buy*order.amount; BTC -= order.amount;
+          ctx.logic.eur += ctx.logic.buy*o.amount;
+          ctx.logic.btc -= o.amount;
+          // 3. Actualitzar document a la BD
+          ctx.db.update('orders', o, function(err, result) {
+            if (err || result != 1)
+              throw err;
+            // 4. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
+            ctx.io.sockets.emit('fired_order', { order: o, balance: { eur: ctx.logic.eur, btc: ctx.logic.btc } });
+          });
         }
       }
     }
-
+    if (updated) {
+      ctx.db.findAll('user', function(err, user) {
+        if (err)
+          throw err;
+        user[0].eur = ctx.logic.eur;
+        user[0].btc = ctx.logic.btc;
+        ctx.db.update('user', user[0], function(err, result) {
+          if (err || result != 1)
+            throw err;
+        });
+      });
+    }
   }
 }
 
