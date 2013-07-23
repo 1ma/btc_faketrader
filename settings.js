@@ -6,9 +6,5 @@ module.exports = {
   },
   http: {
     port: 80
-  },
-  logic: {
-    eur: 1000,
-    btc: 0
   }
 };

@@ -12,8 +12,8 @@ $(document).ready(function() {
   setupBtcftSocket();
 
   $.get('/user', function(data) {
-    eur = data.eur;
-    btc = data.btc;
+    eur = parseFloat(data.eur);
+    btc = parseFloat(data.btc);
     reprintBalance();
   });
 
@@ -22,11 +22,13 @@ $(document).ready(function() {
       return elem.fired_date === null;
     });
     _.each(active_orders, function(elem) {
-      $('#active_list').append('<tr id="'+ elem._id +'"><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
+      attachActiveOrder(elem);
+      //$('#active_list').append('<tr id="'+ elem._id +'"><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
     });
     fired_orders = _.difference(allOrders, active_orders);
     _.each(fired_orders, function(elem) {
-      $('#fired_list').append('<tr id="'+ elem._id +'"><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td><td>' + elem.fired_date +'</td></tr>');
+      attachFiredOrder(elem);
+      //$('#fired_list').append('<tr id="'+ elem._id +'"><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td><td>' + elem.fired_date +'</td></tr>');
     });
   });
 });
@@ -45,8 +47,8 @@ $('#submitBalanceBtn').click(function() {
   var newEur = $('#edit_eur').val();
   var newBtc = $('#edit_btc').val();
   $.post('/user', {"eur": newEur, "btc": newBtc}, function(result) {
-    eur = newEur;
-    btc = newBtc;
+    eur = parseFloat(newEur);
+    btc = parseFloat(newBtc);
     reprintBalance();
   });
 });
@@ -82,30 +84,31 @@ function reprintBalance() {
   $('#edit_btc').val(btc);
 }
 
-function reprintList(array, list) {
-  $('#'+list).empty();
-  _.each(array, function(elem) {
-    $('#'+list).append('<tr><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
-  });
+function attachActiveOrder(order) {
+  $('#active_list').append('<tr id="'+ order._id +'"><td>'+ order.type + '</td><td>'+ order.amount +'</td><td>' + order.price +'</td><td>'+ order.issue_date +'</td></tr>');
+}
+
+function attachFiredOrder(order) {
+  $('#fired_list').append('<tr id="'+ order._id +'"><td>'+ order.type + '</td><td>'+ order.amount +'</td><td>' + order.price +'</td><td>'+ order.issue_date +'</td><td>' + order.fired_date +'</td></tr>');
 }
 
 function setupBtcftSocket() {
   btcft_socket = io.connect('http://localhost');
   btcft_socket.on('fired_order', function(data) {
-  eur = parseFloat(data.balance.eur);
-  btc = parseFloat(data.balance.btc);
-
-  var done = false;
-  for (var i = 0; i < active_orders.length && !done; ++i) {
-    if (data.order._id === active_orders[i]._id) {
-      $('#'+active_orders[i]._id).remove();
-      delete active_orders[i];
-      active_orders = _.compact(active_orders);
-      done = true;
+    eur = parseFloat(data.balance.eur);
+    btc = parseFloat(data.balance.btc);
+    var done = false;
+    for (var i = 0; i < active_orders.length && !done; ++i) {
+      if (data.order._id === active_orders[i]._id) {
+        $('#'+active_orders[i]._id).remove();
+        delete active_orders[i];
+        active_orders = _.compact(active_orders);
+        done = true;
+      }
     }
-  }
-  fired_orders.push(data.order);
-  $('#fired_list').append('<tr id="'+ data.order._id +'"><td>'+ data.order.type + '</td><td>'+ data.order.amount +'</td><td>' + data.order.price +'</td><td>'+ data.order.issue_date +'</td><td>' + data.order.fired_date +'</td></tr>');
-  reprintBalance();
+    fired_orders.push(data.order);
+    attachFiredOrder(data.order);
+    //$('#fired_list').append('<tr id="'+ data.order._id +'"><td>'+ data.order.type + '</td><td>'+ data.order.amount +'</td><td>' + data.order.price +'</td><td>'+ data.order.issue_date +'</td><td>' + data.order.fired_date +'</td></tr>');
+    reprintBalance();
   });
 }

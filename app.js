@@ -81,10 +81,10 @@ function setupLogic(callback) {
         if (err)
             callback(err);
         if (result.length === 0) {
-          ctx.db.insert('user', { eur: ctx.logic.eur, btc: ctx.logic.eur }, function(err, result) {
+          ctx.db.insert('user', { eur: 0, btc: 0 }, function(err, result) {
             if (err === null) {
-              ctx.logic.eur = parseFloat(ctx.settings.logic.eur);
-              ctx.logic.btc = parseFloat(ctx.settings.logic.btc);
+              ctx.logic.eur = parseFloat(0);
+              ctx.logic.btc = parseFloat(0);
               console.log('setupLogic: OK');
             }
             callback(err);
@@ -132,12 +132,6 @@ function setupLogic(callback) {
   });
 
   function processActiveOrders() {
-    // Passos quan salta ordre de mercat:
-    // 1. Omplir el camp fired_date amb linstant actual en memoria
-    // 2. Si es una ordre BUY:  EUR -= ctx.logic.sell*order.amount; BTC += order.amount;
-    //    Si es una ordre SELL: EUR += ctx.logic.buy*order.amount; BTC -= order.amount;
-    // 3. Actualitzar document a la BD
-    // 4. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
     console.log('ProcessActiveOrders()');
     console.log('BUY: ' + ctx.logic.buy);
     console.log('SELL: ' + ctx.logic.sell);
