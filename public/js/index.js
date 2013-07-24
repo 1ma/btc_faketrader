@@ -23,12 +23,10 @@ $(document).ready(function() {
     });
     _.each(active_orders, function(elem) {
       attachActiveOrder(elem);
-      //$('#active_list').append('<tr id="'+ elem._id +'"><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td></tr>');
     });
     fired_orders = _.difference(allOrders, active_orders);
     _.each(fired_orders, function(elem) {
       attachFiredOrder(elem);
-      //$('#fired_list').append('<tr id="'+ elem._id +'"><td>'+ elem.type + '</td><td>'+ elem.amount +'</td><td>' + elem.price +'</td><td>'+ elem.issue_date +'</td><td>' + elem.fired_date +'</td></tr>');
     });
   });
 });
