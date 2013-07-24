@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var DEBUG = true; // Run processActiveOrders() every time MtGox emits data
 
 exports.init = function(ctx, callback) {
   ctx.logic = {};
@@ -41,7 +42,7 @@ exports.init = function(ctx, callback) {
 
       console.log( new Date() + ' BUY -> ' + last_buy + ' | SELL -> ' + last_sell);
 
-      if (true /*last_buy != ctx.logic.buy || last_sell != ctx.logic.sell*/) {
+      if (DEBUG || last_buy != ctx.logic.buy || last_sell != ctx.logic.sell) {
         ctx.logic.buy = last_buy;
         ctx.logic.sell = last_sell;
         ctx.db.findAll('orders', function(err, allOrders) {
@@ -133,4 +134,4 @@ exports.init = function(ctx, callback) {
       });
     }
   }
-}
+};

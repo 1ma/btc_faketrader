@@ -37,6 +37,8 @@ $('#submitOrderBtn').click(function() {
   var price = $('#price').val();
   $.post('/orders', {"type": type, "amount": amount, "price": price}, function(data) {
     active_orders.push(data);
+    $('#amount').val('');
+    $('#price').val('');
     $('#active_list').append('<tr id="'+ data._id +'"><td>'+ data.type + '</td><td>'+ data.amount +'</td><td>' + data.price +'</td><td>'+ data.issue_date +'</td></tr>');
   });
 });

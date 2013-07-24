@@ -2,7 +2,7 @@ var async = require('async');
 
 var ctx = {};
 ctx.settings = require('./settings');
-async.series([setupDB, setupServer, setupMtGoxSocket, setupLogic, listen], ready);
+async.series([setupDB, setupServer, setupSockets, setupLogic, listen], ready);
 
 function setupDB(callback) {
   ctx.db = require('./db');
@@ -10,7 +10,8 @@ function setupDB(callback) {
 }
 
 function setupServer(callback) {
-  var express = require('express')
+  var http    = require('http')
+    , express = require('express')
     , path    = require('path')
     , orders  = require('./routes/orders')
     , user    = require('./routes/user');
@@ -32,28 +33,15 @@ function setupServer(callback) {
   app.get('/user', user.getBalance);
   app.post('/user', user.setBalance);
 
-
   ctx.app = app;
+  ctx.server = http.createServer(app);
   console.log('setupServer: OK');
   callback(null);
 }
 
-function setupMtGoxSocket(callback) {
-  var io = require('socket.io-client');
-
-  var MTGOX_BTCEUR_CHANNELS = {
-    trade: 'dbf1dee9-4f2e-4a08-8cb7-748919a71b21',
-    depth: '057bdc6b-9f9c-44e4-bc1a-363e4443ce87',
-    ticker: '0bb6da8b-f6c6-4ecf-8f0d-a544ad948c15'
-  }
-
-  var mtgox_socket = io.connect('https://socketio.mtgox.com/mtgox?Currency=EUR');
-  mtgox_socket.emit('message', { op: 'unsubscribe', channel: MTGOX_BTCEUR_CHANNELS.trade });
-  mtgox_socket.emit('message', { op: 'unsubscribe', channel: MTGOX_BTCEUR_CHANNELS.depth });
-
-  ctx.mtgox_socket = mtgox_socket;
-  console.log('setupMtGoxSocket: OK');
-  callback(null);
+function setupSockets(callback) {
+  var sockets = require('./sockets');
+  sockets.init(ctx, callback);
 }
 
 function setupLogic(callback) {
@@ -62,14 +50,7 @@ function setupLogic(callback) {
 }
 
 function listen(callback) {
-  var http = require('http')
-    , io   = require('socket.io');
-
-  var server = http.createServer(ctx.app);
-  var io = io.listen(server);
-  io.set('log level', 1);
-  ctx.io = io;
-  server.listen(ctx.app.get('port'), function() {
+  ctx.server.listen(ctx.app.get('port'), function() {
     console.log('listen: OK (port ' + ctx.app.get('port') + ')');
     callback(null);
   });
