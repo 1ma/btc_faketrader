@@ -10,16 +10,16 @@ var MTGOX_BTCEUR_CHANNELS = {
 }
 
 exports.init = function(ctx, callback) {
-  // MtGox socket setup
+  // MtGox API socket setup
   var mtgox_socket = ioc.connect(mtgox_api_query);
   mtgox_socket.emit('message', { op: 'unsubscribe', channel: MTGOX_BTCEUR_CHANNELS.trade });
   mtgox_socket.emit('message', { op: 'unsubscribe', channel: MTGOX_BTCEUR_CHANNELS.depth });
   ctx.mtgox_socket = mtgox_socket;
 
-  // BTC Faketrader socket setup
+  // BTC Faketrader socket listener setup
   ctx.io = io.listen(ctx.server);
   ctx.io.set('log level', 1);
 
-  console.log('setupMtGoxSocket: OK');
+  console.log('setupSockets: OK');
   callback(null);
 };

@@ -2,6 +2,7 @@ var async = require('async');
 
 var ctx = {};
 ctx.settings = require('./settings');
+
 async.series([setupDB, setupServer, setupSockets, setupLogic, listen], ready);
 
 function setupDB(callback) {
@@ -33,7 +34,6 @@ function setupServer(callback) {
   app.get('/user', user.getBalance);
   app.post('/user', user.setBalance);
 
-  ctx.app = app;
   ctx.server = http.createServer(app);
   console.log('setupServer: OK');
   callback(null);
@@ -50,8 +50,8 @@ function setupLogic(callback) {
 }
 
 function listen(callback) {
-  ctx.server.listen(ctx.app.get('port'), function() {
-    console.log('listen: OK (port ' + ctx.app.get('port') + ')');
+  ctx.server.listen(ctx.settings.http.port, function() {
+    console.log('listen: OK (port ' + ctx.settings.http.port + ')');
     callback(null);
   });
 }
