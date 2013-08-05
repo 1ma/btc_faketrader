@@ -2,7 +2,7 @@ var db = require('../db')
   , collection = 'logs';
 
 exports.getAllLogs = function(req, res) {
-  db.findAll(collection, function(err, allOrders) {
+  db.findAll(collection, function(err, allLogs) {
     console.log('/logs findAll:');
     console.log(allLogs);
     if (err)

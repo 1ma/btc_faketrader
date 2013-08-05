@@ -17,6 +17,12 @@ $(document).ready(function() {
     reprintBalance();
   });
 
+  $.get('/logs', function(allLogs) {
+    _.each(allLogs, function(elem) {
+      $('#log_list').append('<tr id="'+ elem._id +'"><td>'+ elem.date + '</td><td>'+ 'Starting balance' +'</td><td>' + elem.eur +'</td><td>'+ '-' +'</td><td>'+ elem.btc +'</td><td>'+ '-' +'</td></tr>');
+    });
+  });
+
   $.get('/orders', function(allOrders) {
     active_orders = _.select(allOrders, function(elem) {
       return elem.fired_date === null;
@@ -50,6 +56,10 @@ $('#submitBalanceBtn').click(function() {
     eur = parseFloat(newEur);
     btc = parseFloat(newBtc);
     reprintBalance();
+    $.get('/logs', function(log) {
+      $('#log_list').find('tr:gt(0)').remove();
+      $('#log_list').append('<tr id="'+ log[0]._id +'"><td>'+ log[0].date + '</td><td>'+ 'Starting balance' +'</td><td>' + log[0].eur +'</td><td>'+ '-' +'</td><td>'+ log[0].btc +'</td><td>'+ '-' +'</td></tr>');
+    });
   });
 });
 
@@ -108,7 +118,6 @@ function setupBtcftSocket() {
     }
     fired_orders.push(data.order);
     attachFiredOrder(data.order);
-    //$('#fired_list').append('<tr id="'+ data.order._id +'"><td>'+ data.order.type + '</td><td>'+ data.order.amount +'</td><td>' + data.order.price +'</td><td>'+ data.order.issue_date +'</td><td>' + data.order.fired_date +'</td></tr>');
     reprintBalance();
   });
 }

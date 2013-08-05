@@ -15,6 +15,7 @@ function setupServer(callback) {
     , express = require('express')
     , path    = require('path')
     , orders  = require('./routes/orders')
+    , logs    = require('./routes/logs')
     , user    = require('./routes/user');
 
   var app = express();
@@ -33,6 +34,7 @@ function setupServer(callback) {
   app.post('/orders', orders.addOrder);
   app.get('/user', user.getBalance);
   app.post('/user', user.setBalance);
+  app.get('/logs', logs.getAllLogs);
 
   ctx.server = http.createServer(app);
   console.log('setupServer: OK');
