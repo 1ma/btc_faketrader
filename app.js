@@ -6,8 +6,8 @@ ctx.settings = require('./settings');
 async.series([setupDB, setupServer, setupSockets, setupLogic, listen], ready);
 
 function setupDB(callback) {
-  ctx.db = require('./db');
-  ctx.db.init(ctx, callback);
+  var db = require('./db');
+  db.init(ctx, callback);
 }
 
 function setupServer(callback) {

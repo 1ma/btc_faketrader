@@ -7,6 +7,7 @@ exports.init = function(ctx, callback) {
     if (err === null) {
       console.log('setupDB: OK');
       db = handler;
+      ctx.db = exports;
     }
     callback(err);
   });
@@ -57,6 +58,16 @@ exports.deleteById = function(collection, id, callback) {
     if (err)
       callback(err, null);
     collectionHandler.remove({ '_id': id }, { safe: true }, function(err, result) {
+      callback(err, result);
+    });
+  });
+};
+
+exports.deleteAll = function(collection, callback) {
+  db.collection(collection, function(err, collectionHandler) {
+    if (err)
+      callback(err, null);
+    collectionHandler.remove(null, { safe: true }, function(err, result) {
       callback(err, result);
     });
   });

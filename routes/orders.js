@@ -18,11 +18,11 @@ exports.getAllOrders = function(req, res) {
     console.log('/orders findAll:');
     console.log(allOrders);
     if (err)
-      res.send(500, 'DB Error!');
+      res.send(500, 'Internal server error');
     else
       res.send(200, allOrders);
   });
-}
+};
 
 exports.addOrder = function(req, res) {
   var type   = validateType(req.body.type);
@@ -41,4 +41,4 @@ exports.addOrder = function(req, res) {
   } else {
     res.send(400, 'Invalid request');
   }
-}
+};
