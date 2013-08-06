@@ -110,6 +110,7 @@ function processActiveOrders(ctx) {
     o.amount = parseFloat(o.amount);
     o.price = parseFloat(o.price);
     console.log('Ordre ' + i + ': ' + JSON.stringify(o));
+    // REFACTOR //
     if (o.type === 'BUY' && o.price >= sell) {
       console.log(' Es compleix la condicio');
       if (sell*o.amount <= eur) {
@@ -124,11 +125,15 @@ function processActiveOrders(ctx) {
         ctx.db.update('orders', o, function(err, result) {
           if (err || result != 1)
             throw err;
-          // 4. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
-          ctx.io.sockets.emit('fired_order', { order: o, balance: { eur: eur, btc: btc } });
-          // 5. Crear nou log a la collection
+          // 4. Crear nou log a la collection
+          ctx.db.insert('logs', {date: o.fired_date, action: o._id, eur: eur, btc: btc}, function(err, result) {
+            console.log('Result from log insert:');
+            console.log(result);
+            // 5. Notificar clients amb el nou log - TODO: Unificar els 2 emits
+            // 6. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
+            ctx.io.sockets.emit('fired_order', { order: o, balance: { eur: eur, btc: btc }, log: result });
+          });
 
-          // 6. Notificar clients amb el nou log - TODO: Unificar els 2 emits
         });
       }
     }
@@ -146,11 +151,18 @@ function processActiveOrders(ctx) {
         ctx.db.update('orders', o, function(err, result) {
           if (err || result != 1)
             throw err;
-          // 4. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
-          ctx.io.sockets.emit('fired_order', { order: o, balance: { eur: eur, btc: btc } });
+          // 4. Crear nou log a la collection
+          ctx.db.insert('logs', {date: o.fired_date, action: o._id, eur: eur, btc: btc}, function(err, result) {
+            console.log('Result from log insert:');
+            console.log(result);
+            // 5. Notificar clients amb el nou log - TODO: Unificar els 2 emits
+            // 6. Notificar clients: Passarlis la ID de la ordre que ha saltat, amb socket.io probablement
+            ctx.io.sockets.emit('fired_order', { order: o, balance: { eur: eur, btc: btc }, log: result });
+          });
         });
       }
     }
+    //////////////
   }
   if (updated) {
     ctx.db.findAll('user', function(err, user) {

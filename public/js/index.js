@@ -2,6 +2,7 @@ var eur
   , btc
   , buy
   , sell
+  , logs
   , active_orders
   , fired_orders
   , mtgox_socket
@@ -17,22 +18,27 @@ $(document).ready(function() {
     reprintBalance();
   });
 
-  $.get('/logs', function(allLogs) {
-    _.each(allLogs, function(elem) {
-      $('#log_list').append('<tr id="'+ elem._id +'"><td>'+ elem.date + '</td><td>'+ 'Starting balance' +'</td><td>' + elem.eur +'</td><td>'+ '-' +'</td><td>'+ elem.btc +'</td><td>'+ '-' +'</td></tr>');
-    });
-  });
-
   $.get('/orders', function(allOrders) {
     active_orders = _.select(allOrders, function(elem) {
       return elem.fired_date === null;
     });
+
     _.each(active_orders, function(elem) {
       attachActiveOrder(elem);
     });
+
     fired_orders = _.difference(allOrders, active_orders);
     _.each(fired_orders, function(elem) {
       attachFiredOrder(elem);
+    });
+
+    $.get('/logs', function(allLogs) {
+      logs = _.sortBy(allLogs, function(elem) {
+        return elem.date;
+      });
+      _.each(allLogs, function(elem) {
+        updateLogger(elem);
+      });
     });
   });
 });
@@ -102,6 +108,21 @@ function attachFiredOrder(order) {
   $('#fired_list').append('<tr id="'+ order._id +'"><td>'+ order.type + '</td><td>'+ order.amount +'</td><td>' + order.price +'</td><td>'+ order.issue_date +'</td><td>' + order.fired_date +'</td></tr>');
 }
 
+function updateLogger(log) {
+  var action_order = _.find(fired_orders, function(elem) {
+    return elem._id === log.action;
+  });
+  // REFACTOR //
+  if (action_order) {
+    var cmd = (action_order.type === 'BUY')? 'Bought ' : 'Sold ';
+    cmd += action_order.amount + ' BTC at ' + action_order.price + '€';
+    $('#log_list').append('<tr id="'+ log._id +'"><td>'+ log.date + '</td><td>'+ cmd +'</td><td>' + log.eur +'</td><td>'+ 'TODO' +'</td><td>'+ log.btc +'</td><td>'+ 'TODO' +'</td></tr>');
+  } else {
+    $('#log_list').append('<tr id="'+ log._id +'"><td>'+ log.date + '</td><td>'+ 'Starting Balance' +'</td><td>' + log.eur +'</td><td>'+ 'TODO' +'</td><td>'+ log.btc +'</td><td>'+ 'TODO' +'</td></tr>');
+  }
+  //////////////
+}
+
 function setupBtcftSocket() {
   btcft_socket = io.connect('http://localhost');
   btcft_socket.on('fired_order', function(data) {
@@ -119,5 +140,7 @@ function setupBtcftSocket() {
     fired_orders.push(data.order);
     attachFiredOrder(data.order);
     reprintBalance();
+    updateLogger(data.log[0]);
+    logs.push(data.log[0]);
   });
 }
